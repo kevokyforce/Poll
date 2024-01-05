@@ -22,7 +22,7 @@ class RegisterController extends Controller
     |
     */
 
-    use RegistersUsers = RouteServiceProvider::MAIN;
+    use RegistersUsers = RouteServiceProvider::HOME;
 
     /**
      * Where to redirect users after registration.
