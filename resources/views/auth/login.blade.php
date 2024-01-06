@@ -55,7 +55,7 @@
         <!-- footer -->
                 
        <div class="footer">
-            <p>&copy; 2020 Online Polling System. All Rights Reserved | Kelvin</a></p>
+            <p>&copy; {{ date('Y')}} Online Polling System. All Rights Reserved | Kelvin</a></p>
         </div>
         <!-- footer -->
     </div>
