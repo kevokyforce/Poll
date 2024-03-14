@@ -48,13 +48,13 @@
         <form action="/polls/{id}/vote" method="post">
             @csrf
 
-            @foreach($polls as $option)
+            @foreach($poll->options as $option)
 
                <p>
                 <label>
-                  <input name="option_id" type="radio" value="{{$option->id}}" @if ($polls == $option->id) checked @endif />
-                  <span>{{$option->content}}  {{$option->votes_count}}</span>
-                </label>
+                  <input name="option_id" type="radio" value="{{ $option->id }}" @if ($selectedOptionId == $option->id) checked @endif />
+                  <span>{{ $option->content }} {{ $option->votes_count }}</span>
+              </label>
             </p>
             <input type="hidden" name="poll_id" value="{{$option->poll_id}}">
             @endforeach

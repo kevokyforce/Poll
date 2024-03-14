@@ -7,6 +7,8 @@ use App\Enums\PollStatus;
 use App\Http\Requests\CreatePollRequest;
 use App\Http\Requests\UpdatePollRequest;
 use App\Http\Requests\VoteRequest;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\JsonResponse;
 use App\Models\Option;
 use App\Models\Poll;
 use App\Models\Vote;
@@ -21,12 +23,11 @@ class PollsController extends Controller
      */
     public function index()
     {
-        //  $polls = auth()->user()->polls()->select('title','status','id')->paginate(10);
-        $polls = DB::table('polls')->get();
+        $polls = Poll::latest()->get(); 
         
-
-        return view('polls.index')->with('polls', $polls);
+        return view('polls.index', compact('polls'));
     }
+    
 
     /**
      * Show the form for creating a new resource.
@@ -50,7 +51,7 @@ class PollsController extends Controller
 
         $poll->options()->createMany($request->options);
 
-        return view('polls.index');
+        return redirect()->route('polls.index');
     }
 
     /**
@@ -61,13 +62,24 @@ class PollsController extends Controller
      */
     public function show($id)
     {
-        $user_id = auth()->user()->id;
-        $polls = DB::table('options')->where('poll_id', $id)->get();
-
-        $confirm = DB::table('votes')->where('user_id', $user_id)->where('poll_id',$id)->first();
-
-
-        return view('polls.show', compact('polls', 'confirm'));
+        // Get the authenticated user's ID
+        $user_id = Auth::id();
+        
+        // Retrieve the poll with options for the specified poll ID
+        $poll = Poll::with('options')->findOrFail($id);
+        
+        // Check if the authenticated user has voted in this poll
+        $confirm = Vote::where('user_id', $user_id)->where('poll_id', $id)->exists();
+        
+        // Get the selected option ID if the user has voted
+        $selectedOptionId = null;
+        if ($confirm) {
+            $vote = Vote::where('user_id', $user_id)->where('poll_id', $id)->first();
+            $selectedOptionId = $vote->option_id;
+        }
+        
+        // Pass the retrieved data to the view
+        return view('polls.show', compact('poll', 'confirm', 'selectedOptionId'));
     }
 
     public function vote(VoteRequest $request, $id)
@@ -98,10 +110,10 @@ class PollsController extends Controller
      */
     public function edit($id)
     {
-        // abort_if(auth()->user()->isNot($poll->user), 403);
-        // abort_if($poll->status != PollStatus::PENDING->value, 404);
-
-        $poll = DB::table('options')->where('id', $id)->get();
+        // Retrieve the poll with the given ID
+        $poll = Poll::findOrFail($id);
+    
+        // Pass the poll to the view
         return view('polls.update', compact('poll'));
     }
 
@@ -114,17 +126,33 @@ class PollsController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $data = $request->safe()->except('options');
-
-        $poll->update($data);
-
-        $poll->options()->delete();
-
-        $poll->options()->createMany($request->options);
-
-        return to_route('polls.index');
+        try {
+            // Retrieve the poll you want to update
+            $poll = Poll::findOrFail($id);
+    
+            // Extract data from the request, excluding specific fields
+            $data = $request->except(['options']);
+    
+            // Update the poll with the extracted data
+            $poll->update($data);
+    
+            // Delete existing options associated with the poll
+            $poll->options()->delete();
+    
+            // Create new options based on the request data
+            $poll->options()->createMany($request->options);
+    
+            // Redirect to the index page with success message
+            return redirect()->route('polls.index')->with('success', 'Poll updated successfully.');
+        } catch (\Exception $e) {
+            // Redirect back with error message if an exception occurs
+            return redirect()->back()->with('error', 'Failed to update poll: ' . $e->getMessage());
+        }
     }
-
+    
+    
+    
+    
     /**
      * Remove the specified resource from storage.
      *
@@ -133,12 +161,21 @@ class PollsController extends Controller
      */
     public function destroy($id)
     {
-        
-
+        // Retrieve the poll you want to delete
+        $poll = Poll::findOrFail($id);
+    
+        // Delete associated votes
+        Vote::whereHas('option', function ($query) use ($poll) {
+            $query->where('poll_id', $poll->id);
+        })->delete();
+    
+        // Delete options associated with the poll
         $poll->options()->delete();
-
+    
+        // Delete the poll itself
         $poll->delete();
-
-        return back();
+    
+        // Return success message
+        return back()->with('success', 'Poll deleted successfully.');
     }
 }

@@ -17,6 +17,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('poll_id')->constrained();
             $table->string('content');
+            $table->dateTime('start_time')->nullable();
+            $table->dateTime('end_date')->nullable();
+            $table->dateTime('end_time')->nullable();
             $table->unsignedBigInteger('votes_count')->default(0);
             $table->timestamps();
         });

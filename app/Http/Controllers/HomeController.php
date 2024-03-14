@@ -22,15 +22,21 @@ class HomeController extends Controller
      *
      * @return \Illuminate\Contracts\Support\Renderable
      */
-    public function index()
-    {
-         $polls = DB::table('polls')->get();
-             foreach ($polls as $value) {
-                    $votes = DB::table('options')->where('poll_id','=', $value->id)->sum('votes_count');
-             }
-         
-        return view('layouts.dashboard', compact('polls','votes'));
+   public function index()
+{
+    $polls = DB::table('polls')->get();
+    $votes = [];
+
+    foreach ($polls as $poll) {
+        // Calculate the total votes for each poll
+        $totalVotes = DB::table('options')->where('poll_id', '=', $poll->id)->sum('votes_count');
+        
+        // Store the total votes in the associative array using poll ID as key
+        $votes[$poll->id] = $totalVotes;
     }
+
+    return view('layouts.dashboard', compact('polls', 'votes'));
+}
     
     public function users()
     {
